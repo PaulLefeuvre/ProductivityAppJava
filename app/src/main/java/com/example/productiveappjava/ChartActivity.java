@@ -12,6 +12,7 @@ public class ChartActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chart);
 
+        // Change the Action Bar title to 'Usage Statistics'
         ActionBar actionBar = getSupportActionBar(); // or getActionBar();
         getSupportActionBar().setTitle("Usage Statistics"); // set the top title
     }
