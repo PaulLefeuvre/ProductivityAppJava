@@ -3,46 +3,27 @@ package com.example.productiveappjava;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import android.Manifest;
-import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.AppOpsManager;
-import android.app.Dialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
-import android.graphics.PixelFormat;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Looper;
 import android.provider.Settings;
-import android.util.Log;
-import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
-import android.view.WindowManager;
-import android.widget.CompoundButton;
-import android.widget.ImageView;
-import android.widget.ToggleButton;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "PermissionLog";
-
-
 
     @RequiresApi(api = Build.VERSION_CODES.M) // Requires an API of 22 or higher
 
@@ -76,47 +57,6 @@ public class MainActivity extends AppCompatActivity {
                         true);
             }
         }
-/*
-        AppOpsManager appOps = (AppOpsManager)
-                getSystemService(Context.APP_OPS_SERVICE);
-        int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
-                android.os.Process.myUid(), getPackageName());
-        if (mode != AppOpsManager.MODE_ALLOWED) {
-            startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
-        }
-        if(!Settings.canDrawOverlays(this)){
-            // ask for setting
-            Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:" + getPackageName()));
-            startActivity(intent);
-        }*/
-
-        // Stuff that doesn't work. Get back to this later
-/*        final WindowManager mWindowManager = (WindowManager) this.getSystemService(Context.WINDOW_SERVICE);
-        final WindowManager.LayoutParams mLayoutParams = new WindowManager.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.TYPE_PHONE,
-                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
-                PixelFormat.TRANSLUCENT);
-        mLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.CENTER_VERTICAL;
-
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        // initiate toggle button's
-        ToggleButton blockActivate = (ToggleButton) findViewById(R.id.blockActivate);
-        blockActivate.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            private View blockView;
-
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked) {
-                    mWindowManager.addView(blockView, mLayoutParams);
-                } else {
-                    mWindowManager.removeView(blockView);
-                }
-            }
-
-        });*/
     }
 
     public void confirmSettingsDialog(String message, Intent desiredIntent, Boolean haveNegative) {
