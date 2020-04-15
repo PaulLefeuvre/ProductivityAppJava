@@ -4,29 +4,48 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.DialogFragment;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
+import android.app.Activity;
 import android.app.AppOpsManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-
-import java.util.ArrayList;
-import java.util.List;
+import android.widget.CompoundButton;
+import android.widget.ToggleButton;
 
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = "PermissionLog";
+    @RequiresApi(api = Build.VERSION_CODES.M) // Requires an API of 23 or higher
 
-    @RequiresApi(api = Build.VERSION_CODES.M) // Requires an API of 22 or higher
+    SharedPreferences.OnSharedPreferenceChangeListener listener = new SharedPreferences.OnSharedPreferenceChangeListener() {
+        @Override
+        public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
+            Log.i("BlockButton", "SharedPreference change detected");
+            Log.i("BlockButton", key);
+            if (key.equals("blockEnable")) {
+                Log.i("BlockButton", "'blockActivate' SharedPreference has been changed.");
+                ToggleButton blockButton = (ToggleButton) findViewById(R.id.blockActivate);
+                if (PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("blockEnable", false)) {
+                    Log.i("BlockButton", "Setting the block button to true");
+                    blockButton.setChecked(true);
+                } else {
+                    Log.i("BlockButton", "Setting the block button to false");
+                    blockButton.setChecked(false);
+                }
+            }
+        }
+    };
 
+    @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -35,15 +54,17 @@ public class MainActivity extends AppCompatActivity {
 
         // Change the Action Bar title
         ActionBar actionBar = getSupportActionBar(); // declare the actionBar
-        getSupportActionBar().setTitle("Home Page"); // set the top title
+        actionBar.setTitle("Home Page"); // set the top title
 
+        // Create the SharedPreferences editor and reader
         Context context = this;
-        SharedPreferences sharedPref = context.getSharedPreferences(getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        SharedPreferences.Editor prefsEditor = sharedPref.edit();
+        final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
+        final SharedPreferences.Editor prefsEditor = sharedPref.edit();
+        sharedPref.registerOnSharedPreferenceChangeListener(listener);
 
         if(sharedPref.getBoolean("checkPermissions", true)) {
             prefsEditor.putBoolean(getString(R.string.check_permission_key), false);
-            prefsEditor.commit();
+            prefsEditor.apply();
             AppOpsManager appOps = (AppOpsManager) getSystemService(Context.APP_OPS_SERVICE);
             int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), getPackageName());
             if (mode != AppOpsManager.MODE_ALLOWED) { // Ask for setting permission if not already granted (Improve message later)
@@ -57,6 +78,22 @@ public class MainActivity extends AppCompatActivity {
                         true);
             }
         }
+
+        final ToggleButton blockButton = (ToggleButton) findViewById(R.id.blockActivate);
+        blockButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    // The toggle is enabled
+                    // Set the toggle button back to deactivated in case the user decides to cancel
+                    prefsEditor.putBoolean("blockEnable", true);
+                    // Hence, pull up a dialog so the user can select a date & time
+                    // Time dialog is called by the date picker dialog after completion
+                    showDatePickerDialog();
+                } else {
+                    // The toggle is disabled
+                }
+            }
+        });
     }
 
     public void confirmSettingsDialog(String message, Intent desiredIntent, Boolean haveNegative) {
@@ -65,13 +102,17 @@ public class MainActivity extends AppCompatActivity {
         newFragment.show(getSupportFragmentManager(), "access");
     }
 
+    public void showDatePickerDialog() {
+        DialogFragment dateFragment = new DatePickerFragment();
+        dateFragment.show(getSupportFragmentManager(), "datePicker");
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
-
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) { // Whenever something is selected from the Action Bar
@@ -92,8 +133,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 }
-
-
 
 /*
 class CheckRunningActivity extends Thread{

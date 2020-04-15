@@ -1,5 +1,9 @@
 package com.example.productiveappjava;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.graphics.drawable.Drawable;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,8 +17,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 
 public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHolder> {
-    private List<String> appTitleDataset;
-    private List<Integer> appImageDataset;
+    private List<String> appTitleDataSet;
+    private List<Drawable> appImageDataSet;
+    private List<String> appPackageDataSet;
+    private Context context;
 
     // Provide a reference to the views for each data item
     // Complex data items may need more than one view per item, and
@@ -34,9 +40,11 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         }
     }
 
-    public AppListAdapter(List<String> textDataset, List<Integer> imageDataset) {
-        appTitleDataset = textDataset;
-        appImageDataset = imageDataset;
+    public AppListAdapter(List<String> textDataSet, List<Drawable> imageDataSet, List<String> packageDataSet, Context inputContext) {
+        appTitleDataSet = textDataSet;
+        appImageDataSet = imageDataSet;
+        appPackageDataSet = packageDataSet;
+        context = inputContext;
     }
 
 
@@ -47,7 +55,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         LayoutInflater inflater = LayoutInflater.from(
                 parent.getContext());
         View v = inflater.inflate(R.layout.app_settings_layout, parent, false);
-        // set the view's size, margins, paddings and layout parameters
+        // set the view's size, margins, padding and layout parameters
         ViewHolder vh = new ViewHolder(v);
         return vh;
     }
@@ -55,20 +63,52 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
     // Replace the contents of a view (invoked by the layout manager)
     @Override
     public void onBindViewHolder(ViewHolder holder, final int position) {
-        // For some reason this function links together every 11th switch. Fix later
+        // Get the SharedPreferences editor
+        SharedPreferences sharedPref = context.getSharedPreferences(String.valueOf(R.string.preference_file_key), Context.MODE_PRIVATE);
+        final SharedPreferences.Editor prefsEditor = sharedPref.edit();
 
-        // - get element from your dataset at this position
+        // - get element from your data set at this position
         // - replace the contents of the view with that element
-        final String title = appTitleDataset.get(position);
-        final Integer image = appImageDataset.get(position);
+        final String title = appTitleDataSet.get(position);
+        final Drawable image = appImageDataSet.get(position);
         holder.textTitle.setText(title);
-        //holder.logoImage.setImageResource(image);
+        holder.logoImage.setImageDrawable(image);
+
+        boolean switchChecked = sharedPref.getBoolean(appPackageDataSet.get(position), false);
+        if(switchChecked) {
+            holder.enableButton.setChecked(true);
+            Log.i("AppListAdapter", "Setting switch to true");
+        }
+        else {
+            holder.enableButton.setChecked(false);
+            Log.i("AppListAdapter", "Setting switch to false");
+        }
+        holder.enableButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    // The toggle is enabled
+                    prefsEditor.putBoolean(appPackageDataSet.get(position), true);
+                    prefsEditor.commit();
+                    Log.i("AppListAdapter", "Committing 'true' to SharedPreferences");
+                } else {
+                    // The toggle is disabled
+                    prefsEditor.putBoolean(appPackageDataSet.get(position), false);
+                    prefsEditor.commit();
+                    Log.i("AppListAdapter", "Committing 'false' to SharedPreferences");
+                }
+            }
+        });
     }
 
-    // Return the size of your dataset (invoked by the layout manager)
+    // Return the size of the data set (invoked by the layout manager)
     @Override
     public int getItemCount() {
-        return appTitleDataset.size();
+        return appTitleDataSet.size();
     }
 
+    @Override
+    public int getItemViewType(int position) {
+        return position;
+    }
 }

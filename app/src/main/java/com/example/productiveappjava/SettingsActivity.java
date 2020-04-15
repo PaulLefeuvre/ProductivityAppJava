@@ -1,15 +1,19 @@
 package com.example.productiveappjava;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.content.res.TypedArray;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.Bundle;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class SettingsActivity extends AppCompatActivity {
@@ -17,6 +21,7 @@ public class SettingsActivity extends AppCompatActivity {
     private RecyclerView.Adapter mAdapter;
     private RecyclerView.LayoutManager layoutManager;
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -26,7 +31,10 @@ public class SettingsActivity extends AppCompatActivity {
         ActionBar actionBar = getSupportActionBar(); // or getActionBar();
         getSupportActionBar().setTitle("App Settings"); // set the top title
 
-        // Error is between these brackets: {
+        final PackageManager pm = getPackageManager();
+        //get a list of installed apps.
+        List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_META_DATA);
+
         recyclerView = (RecyclerView) findViewById(R.id.AppList);
         // use this setting to
         // improve performance if you know that changes
@@ -36,15 +44,35 @@ public class SettingsActivity extends AppCompatActivity {
         // use a linear layout manager
         layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
-        List<String> textInput = new ArrayList<>();
-        List<Integer> imageInput = new ArrayList<>();
-        for (int i = 0; i < 100; i++) {
-            textInput.add("Test" + i);
-            imageInput.add(R.id.icon);
-        }// define an adapter
-        mAdapter = new AppListAdapter(textInput, imageInput);
+
+        List<String> textInput = new ArrayList<>(); // Create app name list
+        List<Drawable> imageInput = new ArrayList<>(); // Create app icon list
+        List<String> packageName = new ArrayList<>();
+        packages.sort(new NameSorter()); // Sort the list of applications
+
+        for (ApplicationInfo packageInfo : packages) { // Loop through all installed apps
+            ApplicationInfo ai = null;
+            try {
+                ai = pm.getApplicationInfo(packageInfo.packageName, 0);
+            } catch (PackageManager.NameNotFoundException e) {
+                e.printStackTrace();
+                continue;
+            }
+            if ((pm.getLaunchIntentForPackage(packageInfo.packageName) != null)) {
+                textInput.add(packageInfo.loadLabel(getPackageManager()).toString()); // Get the package name
+                imageInput.add(packageInfo.loadIcon(getPackageManager())); // Get the package icon
+                packageName.add(packageInfo.packageName);
+            }
+        }
+        mAdapter = new AppListAdapter(textInput, imageInput, packageName, getApplicationContext());
         recyclerView.setAdapter(mAdapter);
-        // }
+    }
+
+    private class NameSorter implements Comparator<ApplicationInfo> {
+        @Override
+        public int compare(ApplicationInfo App1, ApplicationInfo App2) {
+            return App1.loadLabel(getPackageManager()).toString().compareToIgnoreCase(App2.loadLabel(getPackageManager()).toString());
+        }
     }
 }
 
