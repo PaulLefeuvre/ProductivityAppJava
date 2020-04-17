@@ -52,6 +52,7 @@ public class DatePickerFragment extends DialogFragment implements DatePickerDial
         prefsEditor.putInt("chosenMonth", month);
         prefsEditor.putInt("chosenDay", day);
         prefsEditor.apply();
+        Log.d("BlockButton", "Setting date...");
 
         showTimePickerDialog();
     }

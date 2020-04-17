@@ -12,6 +12,7 @@ import android.util.Log;
 import android.widget.TimePicker;
 
 import java.util.Calendar;
+import java.util.Date;
 
 import androidx.fragment.app.DialogFragment;
 
@@ -50,9 +51,28 @@ public class TimePickerFragment extends DialogFragment implements TimePickerDial
     public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
         SharedPreferences.Editor prefsEditor = sharedPref.edit();
-        prefsEditor.putInt("chosenHour", hourOfDay);
-        prefsEditor.putInt("chosenMinute", minute);
-        prefsEditor.putBoolean("blockEnable", true);
-        prefsEditor.apply();
+        Calendar currentTime = Calendar.getInstance();
+        if(currentTime.get(Calendar.DATE) == sharedPref.getInt("chosenDay", 50)
+            && currentTime.get(Calendar.MONTH) == sharedPref.getInt("chosenMonth", 20)
+            && currentTime.get(Calendar.YEAR) == sharedPref.getInt("chosenYear", 1000)
+            && currentTime.get(Calendar.HOUR) >= hourOfDay
+            && currentTime.get(Calendar.MINUTE) >= minute)  {
+            confirmTimeReselectDialog();
+        } else {
+            prefsEditor.putInt("chosenHour", hourOfDay);
+            prefsEditor.putInt("chosenMinute", minute);
+            prefsEditor.apply();
+            confirmTimeConfirmDialog();
+        }
+    }
+
+    public void confirmTimeReselectDialog() {
+        DialogFragment timeReselectFragment = new TimeReselectDialogFragment();
+        timeReselectFragment.show(getActivity().getSupportFragmentManager(), "reselectTime");
+    }
+
+    public void confirmTimeConfirmDialog() {
+        DialogFragment timeConfirmFragment = new ConfirmTimeDialogFragment();
+        timeConfirmFragment.show(getActivity().getSupportFragmentManager(), "confirmTime");
     }
 }
