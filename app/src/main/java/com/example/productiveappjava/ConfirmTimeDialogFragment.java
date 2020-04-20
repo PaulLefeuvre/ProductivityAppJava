@@ -25,9 +25,6 @@ public class ConfirmTimeDialogFragment extends DialogFragment {
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
         final SharedPreferences.Editor prefsEditor = sharedPref.edit();
         String dateStr = sharedPref.getInt("chosenDay", 0) + "/" + (sharedPref.getInt("chosenMonth", 0)+1) + "/" + sharedPref.getInt("chosenYear", 0) + " " + sharedPref.getInt("chosenHour", 0) + ":" + sharedPref.getInt("chosenMinute", 0);
-        Log.i("timerPrint", String.valueOf(sharedPref.getInt("chosenDay", 0)));
-        Log.i("timerPrint", String.valueOf(sharedPref.getInt("chosenMonth", 0)));
-        Log.i("timerPrint", String.valueOf(sharedPref.getInt("chosenYear", 0)));
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
         Date timerDate;
         String durationStr = "";
