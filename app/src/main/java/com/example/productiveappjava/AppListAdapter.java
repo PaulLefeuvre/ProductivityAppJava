@@ -77,25 +77,26 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         boolean switchChecked = sharedPref.getBoolean(appPackageDataSet.get(position), false);
         if(switchChecked) {
             holder.enableButton.setChecked(true);
-            Log.i("AppListAdapter", "Setting switch to true");
+            // Setting switch to true
         }
         else {
             holder.enableButton.setChecked(false);
-            Log.i("AppListAdapter", "Setting switch to false");
+            // Setting switch to false
         }
         holder.enableButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                Log.i("BlockerService", "Package name " + appPackageDataSet.get(position) + " has been toggled");
                 if (isChecked) {
                     // The toggle is enabled
                     prefsEditor.putBoolean(appPackageDataSet.get(position), true);
                     prefsEditor.commit();
-                    Log.i("AppListAdapter", "Committing 'true' to SharedPreferences");
+                    // Commit 'true' to the SharedPreferences
                 } else {
                     // The toggle is disabled
                     prefsEditor.putBoolean(appPackageDataSet.get(position), false);
                     prefsEditor.commit();
-                    Log.i("AppListAdapter", "Committing 'false' to SharedPreferences");
+                    // Commit 'false' to SharedPreferences
                 }
             }
         });

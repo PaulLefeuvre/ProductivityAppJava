@@ -1,9 +1,13 @@
 <resources>
-    <string name="app_name">Vine2</string>
+    <string name="app_name">Abandonware</string>
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="settingsAcknowledge">I understand and will enable this permission</string>
     <string name="settingsCancel">Allow Later</string>
     <string name="preference_file_key">com.example.ProductiveAppJava.mPreferences</string>
     <string name="check_permission_key">checkPermissions</string>
+    <string name="notif_text">Currently making sure you don\'t get distracted.</string>
+    <string name="notif_title">App block is active</string>
+    <string name="broadcastContext">com.example.productiveappjava.BlockJobService</string>
+    <string name="currentAppKey">currentApp</string>
 </resources>

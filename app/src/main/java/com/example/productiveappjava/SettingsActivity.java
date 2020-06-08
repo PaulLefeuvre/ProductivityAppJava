@@ -59,9 +59,12 @@ public class SettingsActivity extends AppCompatActivity {
                 continue;
             }
             if ((pm.getLaunchIntentForPackage(packageInfo.packageName) != null)) {
-                textInput.add(packageInfo.loadLabel(getPackageManager()).toString()); // Get the package name
-                imageInput.add(packageInfo.loadIcon(getPackageManager())); // Get the package icon
-                packageName.add(packageInfo.packageName);
+                // Check that it's not our own application we're adding to the list, so the user can't block the app itself
+                if(!packageInfo.packageName.equals(this.getPackageName())) {
+                    textInput.add(packageInfo.loadLabel(getPackageManager()).toString()); // Get the package name
+                    imageInput.add(packageInfo.loadIcon(getPackageManager())); // Get the package icon
+                    packageName.add(packageInfo.packageName);
+                }
             }
         }
         mAdapter = new AppListAdapter(textInput, imageInput, packageName, getApplicationContext());

@@ -5,6 +5,7 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.DialogFragment;
 
+import android.app.ActivityManager;
 import android.app.AppOpsManager;
 import android.content.Context;
 import android.content.Intent;
@@ -30,6 +31,16 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean runTimer = false;
 
+    // For the countdown timer
+    int days = 0;
+    int hours = 100;
+    int minutes = 0;
+    int seconds = 0;
+    Date targetDate;
+
+    Intent startServiceIntent;
+    private BlockerService blockerService;
+
     @RequiresApi(api = Build.VERSION_CODES.M) // Requires an API of minimum 23
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,7 +57,6 @@ public class MainActivity extends AppCompatActivity {
         Context context = this;
         final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
         final SharedPreferences.Editor prefsEditor = sharedPref.edit();
-        sharedPref.registerOnSharedPreferenceChangeListener(listener);
 
         // Check permissions and ask for them if they are not granted
         if(sharedPref.getBoolean("checkPermissions", true)) {
@@ -70,74 +80,72 @@ public class MainActivity extends AppCompatActivity {
         final Handler handler = new Handler();
         final Runnable updateTimeTask = new Runnable() {
             public void run() {
-                handler.postDelayed(this, 1000);
                 TextView timerText = (TextView)findViewById(R.id.countdownTimer);
 
-                final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                String dateStr = sharedPref.getInt("chosenDay", 0) + "/" + (sharedPref.getInt("chosenMonth", 0)+1) + "/" + sharedPref.getInt("chosenYear", 0) + " " + sharedPref.getInt("chosenHour", 0) + ":" + sharedPref.getInt("chosenMinute", 0);
-                SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-                Date startDate;
-                try {
-                    startDate = sdf.parse(dateStr);
-                } catch (ParseException e) {
-                    return;
-                }
                 long currentTime = System.currentTimeMillis();
-                if(currentTime >= startDate.getTime()) {
+                if(currentTime >= getTimerTime()) {
+                    Log.i("Timer", "Timer finished");
                     timerText.setText("");
-                    SharedPreferences.Editor prefsEditor = sharedPref.edit();
-                    prefsEditor.putBoolean("blockEnable", false);
-                    prefsEditor.apply();
+                    runTimer = false;
                 } else if(runTimer) {
                     handler.postDelayed(this, 1000);
-
-                    long timeDiff = startDate.getTime() - currentTime;
-                    int days = (int) Math.floor(timeDiff / 864000000);
-                    timeDiff = timeDiff % 864000000;
-                    int hours = (int) Math.floor(timeDiff / 3600000);
-                    timeDiff = timeDiff % 3600000;
-                    int minutes = (int) Math.floor(timeDiff / 60000);
-                    timeDiff = timeDiff % 60000;
-                    int seconds = (int) Math.floor(timeDiff / 1000);
-
-                    String finalDate = "";
-                    if (days < 10) {
-                        finalDate += "0" + days;
+                    if(hours == 100) { // Condition defined for when the time remaining has to be calculated completely
+                        timeDiffCalculate();
+                        Log.i("Timer", days + ":" + hours + ":" + minutes + ":" + seconds);
                     } else {
-                        finalDate += days;
+                        if(seconds == 0) {
+                            if(minutes == 0) {
+                                if(hours == 0) {
+                                    if(days == 0) {
+                                        // This should never happen. If it somehow has, good luck fixing it
+                                    } else {
+                                        days--;
+                                        hours = 23;
+                                        minutes = 59;
+                                        seconds = 59;
+                                    }
+                                } else {
+                                    hours--;
+                                    minutes = 59;
+                                    seconds = 59;
+                                }
+                            } else {
+                                minutes--;
+                                seconds = 59;
+                            }
+                        } else {
+                            seconds--;
+                        }
                     }
-                    if (hours < 10) {
-                        finalDate += ":0" + hours;
-                    } else {
-                        finalDate += ":" + hours;
-                    }
-                    if (minutes < 10) {
-                        finalDate += ":0" + minutes;
-                    } else {
-                        finalDate += ":" + minutes;
-                    }
-                    if (seconds < 10) {
-                        finalDate += ":0" + seconds;
-                    } else {
-                        finalDate += ":" + seconds;
-                    }
-
-                    Log.d("BlockButton", "Updating timer text...");
-
+                    String finalDate = String.format("%02d", days) + ":" + String.format("%02d", hours) + ":" + String.format("%02d", minutes) + ":" + String.format("%02d", seconds);
+                    Log.i("Timer", "Updating timer text: " + finalDate);
                     timerText.setText(finalDate);
                 }
+
             }
         };
 
         final TextView timerText = (TextView)findViewById(R.id.countdownTimer);
         final ToggleButton blockButton = (ToggleButton) findViewById(R.id.blockActivate);
 
+        // The variables needed to initialize the blocking service
+        blockerService = new BlockerService();
+        startServiceIntent = new Intent(this, blockerService.getClass());
+
+        // Check if the blocking service has been activated from the start
         if(sharedPref.getBoolean("blockEnable", false)) {
+            // If the block is on, check the button and disable it
             blockButton.setChecked(true);
             blockButton.setEnabled(false);
             runTimer = true;
             handler.post(updateTimeTask);
+
+            // Also start the service that checks which app is running in the background
+            if (!isMyServiceRunning(blockerService.getClass())) { // but only if it isn't already running
+                startService(startServiceIntent);
+            }
         } else {
+            // Otherwise set it so it's unchecked
             blockButton.setChecked(false);
         }
 
@@ -145,7 +153,6 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     // The toggle is enabled
-
                     // If it's the user that toggled the button and not the SharedPreference listener
                     if(!sharedPref.getBoolean("blockEnable", false)) {
                         // Set the toggle button back to deactivated in case the user decides to cancel
@@ -156,6 +163,7 @@ public class MainActivity extends AppCompatActivity {
                     } else {
                         runTimer = true;
                         handler.post(updateTimeTask);
+                        Log.i("Timer", "SharedPreference Change started");
                     }
                 } else {
                     blockButton.setEnabled(true);
@@ -164,31 +172,80 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    @Override protected void onStop() {
-        super.onStop();
-        runTimer = false;
-        // Stop the runnable from working here
-    }
-
-    SharedPreferences.OnSharedPreferenceChangeListener listener = new SharedPreferences.OnSharedPreferenceChangeListener() {
+    SharedPreferences.OnSharedPreferenceChangeListener prefListener = new SharedPreferences.OnSharedPreferenceChangeListener(){
+        @RequiresApi(api = Build.VERSION_CODES.M)
         @Override
         public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
-            Log.i("BlockButton", "SharedPreference change detected");
-            Log.i("BlockButton", key);
+            Log.i("Timer", "SharedPreference change detected");
+            Log.i("Timer", key);
             if (key.equals("blockEnable")) {
-                Log.i("BlockButton", "'blockActivate' SharedPreference has been changed.");
+                Log.i("Timer", "'blockEnable' SharedPreference has been changed.");
                 ToggleButton blockButton = (ToggleButton) findViewById(R.id.blockActivate);
                 if (PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("blockEnable", false)) {
-                    Log.i("BlockButton", "Setting the block button to true");
+                    // Set the block button to true, and disable it
                     blockButton.setChecked(true);
                     blockButton.setEnabled(false);
+                    // Start the background service
+                    startService(startServiceIntent);
                 } else {
-                    Log.i("BlockButton", "Setting the block button to false");
+                    // Set the block button to false
                     blockButton.setChecked(false);
+                    // Stop the background service, but only if it is actually running
+                    if (isMyServiceRunning(blockerService.getClass())) {
+                        stopService(startServiceIntent);
+                    }
                 }
             }
         }
     };
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        // Create the SharedPreferences editor and reader
+        Context context = this;
+        final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
+        sharedPref.registerOnSharedPreferenceChangeListener(prefListener);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        // Create the SharedPreferences editor and reader
+        Context context = this;
+        final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
+        sharedPref.unregisterOnSharedPreferenceChangeListener(prefListener);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // Stop the runnable from working here
+        runTimer = false;
+        // Set it so that the time needs to be recalculated
+        hours = 100;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // stopService(startServiceIntent); // Unkillable service stuff
+    }
+
+    // Function that checks if a service is currently running. Mainly used for the blocker service
+    private boolean isMyServiceRunning(Class<?> serviceClass) {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                Log.i ("isMyServiceRunning?", true+"");
+                return true;
+            }
+        }
+        Log.i ("isMyServiceRunning?", false+"");
+        return false;
+    }
 
     public void confirmSettingsDialog(String message, Intent desiredIntent, Boolean haveNegative) {
         DialogFragment permissionFragment = new ChangeSettingsDialogFragment();
@@ -199,6 +256,32 @@ public class MainActivity extends AppCompatActivity {
     public void showDatePickerDialog() {
         DialogFragment dateFragment = new DatePickerFragment();
         dateFragment.show(getSupportFragmentManager(), "datePicker");
+    }
+
+    public void timeDiffCalculate() {
+        long currentTime = System.currentTimeMillis();
+        long timerTime = getTimerTime();
+        long timeDiff = timerTime - currentTime;
+        days = (int) Math.floor(timeDiff / 864000000);
+        timeDiff = timeDiff % 864000000;
+        hours = (int) Math.floor(timeDiff / 3600000);
+        timeDiff = timeDiff % 3600000;
+        minutes = (int) Math.floor(timeDiff / 60000);
+        timeDiff = timeDiff % 60000;
+        seconds = (int) Math.floor(timeDiff / 1000);
+    }
+
+    public long getTimerTime() {
+        final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        String dateStr = sharedPref.getInt("chosenDay", 0) + "/" + (sharedPref.getInt("chosenMonth", 0)+1) + "/" + sharedPref.getInt("chosenYear", 0) + " " + sharedPref.getInt("chosenHour", 0) + ":" + sharedPref.getInt("chosenMinute", 0);
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+        try {
+            targetDate = sdf.parse(dateStr);
+            return targetDate.getTime();
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return System.currentTimeMillis();
+        }
     }
 
     @Override
