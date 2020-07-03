@@ -11,11 +11,15 @@ import android.app.usage.UsageStatsManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
-import android.preference.PreferenceManager;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.widget.ImageView;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -23,6 +27,7 @@ import java.util.Date;
 import java.util.List;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 
 public class BlockerService extends Service {
@@ -31,12 +36,16 @@ public class BlockerService extends Service {
     Date targetDate;
     long targetTime;
     String currentApp;
+    String ignoreApp;
+    Integer timeDiff;
+    Boolean overlayActivate;
 
     @Override
     public void onCreate() {
         super.onCreate();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         createNotificationChannel();
@@ -57,8 +66,29 @@ public class BlockerService extends Service {
 
         startForeground(1, notification);
 
-        final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        // Set up the imageView to display later - make this a video view later
+        final ImageView blockImageView = new ImageView(getApplicationContext());
+        // Set image resource
+        blockImageView.setImageResource(R.drawable.green);
+        // Set the image position
+        blockImageView.setLayoutParams(new ViewGroup.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.WRAP_CONTENT));
+
+        // Initialize the WindowManager
+        final WindowManager blockWindowManager = (WindowManager) getApplicationContext().getSystemService(Context.WINDOW_SERVICE);
+        final WindowManager.LayoutParams blockLayoutParams = new WindowManager.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                PixelFormat.TRANSLUCENT);
+        blockLayoutParams.gravity = Gravity.CENTER; // Set it so it stays in the center - fix later depending on where the vines come from
+
+        final SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(String.valueOf(R.string.preference_file_key), 0);
         final SharedPreferences.Editor prefsEditor = sharedPref.edit();
+
+        overlayActivate = false;
+        ignoreApp = "";
 
         final Handler handler = new Handler();
         final Runnable checkTime = new Runnable() {
@@ -74,7 +104,7 @@ public class BlockerService extends Service {
                     targetTime = targetDate.getTime();
                 } catch (ParseException e) {
                     e.printStackTrace();
-                    targetTime = System.currentTimeMillis();
+                    targetTime = System.currentTimeMillis() - 10;
                 }
                 if(currentTime >= targetTime) {
                     // If the target time is reached
@@ -84,17 +114,29 @@ public class BlockerService extends Service {
                 } else {
                     handler.postDelayed(this, 1000);
                 }
-                currentApp = getForegroundApp(getApplicationContext());
-                if(currentApp != null) {
-                    prefsEditor.putString(String.valueOf(R.string.currentAppKey), currentApp);
-                    prefsEditor.commit();
+                currentApp = null;
+                timeDiff = 0;
+                while(currentApp == null) {
+                    timeDiff += 1000;
+                    currentApp = getForegroundApp(getApplicationContext(), timeDiff, currentApp);
                 }
-                Log.i("BlockerService", "currentApp value: " + currentApp);
-                Log.i("BlockerService", "sharedPref value: " + sharedPref.getString(String.valueOf(R.string.currentAppKey), ""));
-                if(sharedPref.getBoolean(String.valueOf(sharedPref.getString(String.valueOf(R.string.currentAppKey), "")), false)) {
+                Log.i("BlockerService", "Current App: " + currentApp);
+
+                if(sharedPref.getBoolean(currentApp, false)) { // If the app is supposed to be blocked
                     Log.i("BlockerService", "Gotcha! You're not supposed to be using the app: " + currentApp);
+                    if(!overlayActivate) {
+                        overlayActivate = true;
+                        blockWindowManager.addView(blockImageView, blockLayoutParams);
+                        /*if(ignoreApp == "") {
+                            findOverlayApp();
+                        }*/
+                    }
                 } else {
                     Log.i("BlockerService", "You're doing alright for now. Keep it up");
+                    if(overlayActivate) {
+                        overlayActivate = false;
+                        blockWindowManager.removeView(blockImageView);
+                    }
                 }
             }
         };
@@ -108,7 +150,8 @@ public class BlockerService extends Service {
     public void onDestroy() {
         super.onDestroy();
         // If the block is still on, restart the service. If not, do nothing and let the service be destroyed
-        if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("blockEnable", false)) {
+        final SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(String.valueOf(R.string.preference_file_key), 0);
+        if(sharedPref.getBoolean("blockEnable", false)) {
             Intent broadcastIntent = new Intent(this, StartServiceReceiver.class);
             sendBroadcast(broadcastIntent);
         }
@@ -132,13 +175,13 @@ public class BlockerService extends Service {
         }
     }
 
-    public static String getForegroundApp(Context context) {
+    public String getForegroundApp(Context context, Integer interval, String previousApp) {
         UsageStatsManager usageStatsManager = (UsageStatsManager) context
                 .getSystemService(Context.USAGE_STATS_SERVICE);
         long currTime = System.currentTimeMillis();
         List<UsageStats> queryUsageStats = usageStatsManager
                 .queryUsageStats(UsageStatsManager.INTERVAL_BEST,
-                        currTime - 1000, currTime);
+                        currTime - interval, currTime);
         if (queryUsageStats == null || queryUsageStats.isEmpty()) {
             return null;
         }
@@ -149,6 +192,29 @@ public class BlockerService extends Service {
                 recentStats = usageStats;
             }
         }
-        return recentStats.getPackageName();
+        if(recentStats.getPackageName().equals("android")) {
+            return previousApp;
+        } else {
+            return recentStats.getPackageName();
+        }
+    }
+
+    public void findOverlayApp() {
+        String previousApp = currentApp = getForegroundApp(getApplicationContext(), 1000, currentApp);
+        while(previousApp.equals(currentApp)) {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            timeDiff = 0;
+            currentApp = null;
+            while(currentApp == null) {
+                timeDiff += 1000;
+                currentApp = getForegroundApp(getApplicationContext(), timeDiff, currentApp);
+            }
+            Log.i("BlockerService", "Current app: " + currentApp);
+        }
+        ignoreApp = currentApp;
     }
 }

@@ -13,7 +13,6 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
@@ -55,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Create the SharedPreferences editor and reader
         Context context = this;
-        final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
+        final SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(String.valueOf(R.string.preference_file_key), 0);
         final SharedPreferences.Editor prefsEditor = sharedPref.edit();
 
         // Check permissions and ask for them if they are not granted
@@ -145,8 +144,10 @@ public class MainActivity extends AppCompatActivity {
                 startService(startServiceIntent);
             }
         } else {
-            // Otherwise set it so it's unchecked
+            // Otherwise set it so it's unchecked, enabled, and the timer text is empty
             blockButton.setChecked(false);
+            blockButton.setEnabled(true);
+            timerText.setText("");
         }
 
         blockButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -176,15 +177,21 @@ public class MainActivity extends AppCompatActivity {
         @RequiresApi(api = Build.VERSION_CODES.M)
         @Override
         public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
+            final SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(String.valueOf(R.string.preference_file_key), 0);
+            final SharedPreferences.Editor prefsEditor = sharedPref.edit();
+
             Log.i("Timer", "SharedPreference change detected");
             Log.i("Timer", key);
             if (key.equals("blockEnable")) {
                 Log.i("Timer", "'blockEnable' SharedPreference has been changed.");
                 ToggleButton blockButton = (ToggleButton) findViewById(R.id.blockActivate);
-                if (PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("blockEnable", false)) {
+                if (sharedPref.getBoolean("blockEnable", false)) {
                     // Set the block button to true, and disable it
                     blockButton.setChecked(true);
                     blockButton.setEnabled(false);
+                    // Make the current app SharedPref empty to avoid mistakes
+                    prefsEditor.putString(String.valueOf(R.string.currentAppKey), "");
+                    prefsEditor.commit();
                     // Start the background service
                     startService(startServiceIntent);
                 } else {
@@ -205,7 +212,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Create the SharedPreferences editor and reader
         Context context = this;
-        final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
+        final SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(String.valueOf(R.string.preference_file_key), 0);
         sharedPref.registerOnSharedPreferenceChangeListener(prefListener);
     }
 
@@ -215,7 +222,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Create the SharedPreferences editor and reader
         Context context = this;
-        final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
+        final SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(String.valueOf(R.string.preference_file_key), 0);
         sharedPref.unregisterOnSharedPreferenceChangeListener(prefListener);
     }
 
@@ -231,7 +238,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // stopService(startServiceIntent); // Unkillable service stuff
     }
 
     // Function that checks if a service is currently running. Mainly used for the blocker service
@@ -272,7 +278,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public long getTimerTime() {
-        final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        final SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(String.valueOf(R.string.preference_file_key), 0);
         String dateStr = sharedPref.getInt("chosenDay", 0) + "/" + (sharedPref.getInt("chosenMonth", 0)+1) + "/" + sharedPref.getInt("chosenYear", 0) + " " + sharedPref.getInt("chosenHour", 0) + ":" + sharedPref.getInt("chosenMinute", 0);
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
         try {

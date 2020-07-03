@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
-import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.util.Log;
 
@@ -34,7 +33,8 @@ public class MyApp extends Application {
         Log.i("main", "onCreate fired");
 
         Context context = this;
-        SharedPreferences.Editor prefsEditor = PreferenceManager.getDefaultSharedPreferences(this).edit();
+        final SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(String.valueOf(R.string.preference_file_key), 0);
+        SharedPreferences.Editor prefsEditor = sharedPref.edit();
 
         prefsEditor.putBoolean("checkPermissions", true);
         prefsEditor.apply();

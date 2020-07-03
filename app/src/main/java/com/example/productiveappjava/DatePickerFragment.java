@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.widget.DatePicker;
 
@@ -32,7 +31,7 @@ public class DatePickerFragment extends DialogFragment implements DatePickerDial
                 // Deactivate the button and don't proceed with the timer
                 // This is done by changing the SharedPreference value 'blockActivate'
                 Log.i("BlockButton", "Date Dialog cancelled");
-                SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
+                final SharedPreferences sharedPref = getActivity().getSharedPreferences(String.valueOf(R.string.preference_file_key), 0);
                 SharedPreferences.Editor prefsEditor = sharedPref.edit();
                 prefsEditor.putBoolean("blockEnable", false);
                 prefsEditor.apply();
@@ -46,7 +45,7 @@ public class DatePickerFragment extends DialogFragment implements DatePickerDial
     }
 
     public void onDateSet(DatePicker view, int year, int month, int day) {
-        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        final SharedPreferences sharedPref = getActivity().getSharedPreferences(String.valueOf(R.string.preference_file_key), 0);
         SharedPreferences.Editor prefsEditor = sharedPref.edit();
         prefsEditor.putInt("chosenYear", year);
         prefsEditor.putInt("chosenMonth", month);

@@ -86,16 +86,16 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         holder.enableButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                Log.i("BlockerService", "Package name " + appPackageDataSet.get(position) + " has been toggled");
+                Log.i("BlockerService", "Package name " + appPackageDataSet.get(position) + " has been toggled to: " + isChecked);
                 if (isChecked) {
                     // The toggle is enabled
                     prefsEditor.putBoolean(appPackageDataSet.get(position), true);
-                    prefsEditor.commit();
+                    prefsEditor.apply();
                     // Commit 'true' to the SharedPreferences
                 } else {
                     // The toggle is disabled
                     prefsEditor.putBoolean(appPackageDataSet.get(position), false);
-                    prefsEditor.commit();
+                    prefsEditor.apply();
                     // Commit 'false' to SharedPreferences
                 }
             }

@@ -5,7 +5,6 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.util.Log;
 
 import androidx.fragment.app.DialogFragment;
@@ -24,7 +23,7 @@ public class TimeReselectDialogFragment extends DialogFragment {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 Log.d("BlockButton", "Cancel button pressed");
-                SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
+                final SharedPreferences sharedPref = getActivity().getSharedPreferences(String.valueOf(R.string.preference_file_key), 0);
                 SharedPreferences.Editor prefsEditor = sharedPref.edit();
                 prefsEditor.putBoolean("blockEnable", false);
                 prefsEditor.apply();

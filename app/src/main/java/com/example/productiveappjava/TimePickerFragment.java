@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.text.format.DateFormat;
 import android.util.Log;
 import android.widget.TimePicker;
@@ -35,7 +34,7 @@ public class TimePickerFragment extends DialogFragment implements TimePickerDial
             @Override
             public void onCancel(DialogInterface dialog) {
                 Log.d("BlockButton", "Time dialog cancelled"); // Never logged when cancel button pressed
-                SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
+                final SharedPreferences sharedPref = getActivity().getSharedPreferences(String.valueOf(R.string.preference_file_key), 0);
                 SharedPreferences.Editor prefsEditor = sharedPref.edit();
                 prefsEditor.putBoolean("blockEnable", false);
                 prefsEditor.apply();
@@ -49,7 +48,7 @@ public class TimePickerFragment extends DialogFragment implements TimePickerDial
     }
 
     public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
-        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        final SharedPreferences sharedPref = getActivity().getSharedPreferences(String.valueOf(R.string.preference_file_key), 0);
         SharedPreferences.Editor prefsEditor = sharedPref.edit();
         Calendar currentTime = Calendar.getInstance();
         if(currentTime.get(Calendar.DATE) == sharedPref.getInt("chosenDay", 50)
