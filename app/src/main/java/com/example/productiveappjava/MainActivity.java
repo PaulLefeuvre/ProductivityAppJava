@@ -79,12 +79,11 @@ public class MainActivity extends AppCompatActivity {
         final Handler handler = new Handler();
         final Runnable updateTimeTask = new Runnable() {
             public void run() {
-                TextView timerText = (TextView)findViewById(R.id.countdownTimer);
+                ToggleButton blockButton = (ToggleButton) findViewById(R.id.blockActivate);
 
                 long currentTime = System.currentTimeMillis();
                 if(currentTime >= getTimerTime()) {
                     Log.i("Timer", "Timer finished");
-                    timerText.setText("");
                     runTimer = false;
                 } else if(runTimer) {
                     handler.postDelayed(this, 1000);
@@ -118,13 +117,12 @@ public class MainActivity extends AppCompatActivity {
                     }
                     String finalDate = String.format("%02d", days) + ":" + String.format("%02d", hours) + ":" + String.format("%02d", minutes) + ":" + String.format("%02d", seconds);
                     Log.i("Timer", "Updating timer text: " + finalDate);
-                    timerText.setText(finalDate);
+                    blockButton.setText(finalDate);
                 }
 
             }
         };
 
-        final TextView timerText = (TextView)findViewById(R.id.countdownTimer);
         final ToggleButton blockButton = (ToggleButton) findViewById(R.id.blockActivate);
 
         // The variables needed to initialize the blocking service
@@ -147,7 +145,6 @@ public class MainActivity extends AppCompatActivity {
             // Otherwise set it so it's unchecked, enabled, and the timer text is empty
             blockButton.setChecked(false);
             blockButton.setEnabled(true);
-            timerText.setText("");
         }
 
         blockButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -163,6 +160,7 @@ public class MainActivity extends AppCompatActivity {
                         showDatePickerDialog();
                     } else {
                         runTimer = true;
+                        hours = 100;
                         handler.post(updateTimeTask);
                         Log.i("Timer", "SharedPreference Change started");
                     }

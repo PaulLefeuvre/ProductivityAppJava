@@ -58,7 +58,7 @@ public class SettingsActivity extends AppCompatActivity {
                 e.printStackTrace();
                 continue;
             }
-            if ((pm.getLaunchIntentForPackage(packageInfo.packageName) != null)) {
+            if (pm.getLaunchIntentForPackage(packageInfo.packageName) != null) {
                 // Check that it's not our own application we're adding to the list, so the user can't block the app itself
                 if(!packageInfo.packageName.equals(this.getPackageName())) {
                     textInput.add(packageInfo.loadLabel(getPackageManager()).toString()); // Get the package name
